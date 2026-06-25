@@ -7,10 +7,13 @@ description: >-
   nothing shows on the bar, (3) QML logs show "Cannot read property X of
   undefined" or "depends on non-bindable properties: ...::data", (4) "Invalid
   property assignment: string expected" in a settings component, (5) pill
-  content isn't sized/seated correctly, or (6) edited plugin QML doesn't take
-  effect after toggling the plugin.
+  content isn't sized/seated correctly, (6) edited plugin QML doesn't take
+  effect after toggling the plugin, (7) a chart/value bound to a DgopService
+  history array never updates (frozen graph), (8) a DankToggle/DankDropdown
+  won't change or a setting won't turn off, or (9) reusing the built-in System
+  Monitor popout or placing multiple widgets from one plugin (variants).
 author: Claude Code
-version: 1.0.0
+version: 1.1.0
 date: 2026-06-24
 ---
 
@@ -112,6 +115,65 @@ Each gotcha below is **symptom → cause → fix → why**.
 - **Why:** The settings panel's height is `loader.item ? implicitHeight : 0`, so a
   failed component is indistinguishable from "no settings" unless you read the log.
 
+### DgopService history arrays are mutated in place — keep your own buffer
+
+- **Symptom:** A chart or value bound to `DgopService.cpuHistory` / `memoryHistory`
+  (or similar service history) **never updates** — the graph is frozen — even
+  though the numbers are clearly changing.
+- **Cause:** `DgopService.addToHistory` does `array.push()/shift()` and **never
+  reassigns** the property, so the `var` property-change signal never fires;
+  bindings to it are not reactive. (DMS's own `PerformanceView` keeps its *own*
+  sampled history for exactly this reason.)
+- **Fix:** Keep your own buffer. Sample the live scalar (`DgopService.cpuUsage`,
+  etc.) on a `Timer` and **reassign** the array each tick
+  (`buf = pushSample(buf, v, cap)` returning a *new* array). Seed once from the
+  service history if you want it pre-filled.
+- **Why:** QML reactivity tracks reassignment, not in-place mutation of a
+  referenced object.
+
+### Dank* input widgets are controlled (DankToggle / DankDropdown)
+
+- **Symptom:** A toggle won't turn off, or a dropdown selection doesn't stick —
+  the value stays at its initial setting no matter what you click.
+- **Cause:** `DankToggle` emits `toggled(bool)` and `DankDropdown` emits
+  `valueChanged(string)`, but they **do not update their own `checked` /
+  `currentValue`**. Reading `.checked`/`.currentValue` after a click returns the
+  initial value.
+- **Fix:** Make them controlled — back each with your own property and update it
+  in the handler: `DankToggle { checked: root.v; onToggled: c => root.v = c }`;
+  `DankDropdown { currentValue: x; onValueChanged: v => { x = v; save(v) } }`.
+- **Why:** They're controlled components — the signal is the source of truth, not
+  the widget's internal state.
+
+### Reuse the System Monitor popout via `toggleProcessListModal()`
+
+- **Symptom:** A plugin pill's `pillClickAction` calling
+  `PopoutService.toggleProcessList(...)` does nothing.
+- **Cause:** `toggleProcessList()` is a no-op unless the **bar-anchored**
+  process-list popout is already loaded — and the bar only loads it for its
+  built-in widgets, never for a plugin.
+- **Fix:** Use `PopoutService.toggleProcessListModal()` (no args) — it lazy-loads
+  and shows the System Monitor: `pillClickAction: () => PopoutService.toggleProcessListModal()`.
+- **Why:** The modal path self-loads; the anchored path assumes a loader the
+  plugin doesn't own.
+
+### Multiple widgets from one plugin = variants (auto-seed them)
+
+- **Symptom:** You want one plugin to provide several distinct bar widgets (e.g.
+  one per metric) without making the user hand-create variants.
+- **Cause:** A single plugin can only place multiple distinct widgets through
+  DMS's **variant** mechanism (`pluginId:variantId`); each placed instance is
+  injected a `variantData` object.
+- **Fix:** Auto-seed in the **settings component's** `Component.onCompleted`
+  (idempotent): read `pluginService.getPluginVariants(id)` and
+  `createVariant(label, { … })` for any missing — they then appear in the DankBar
+  add-widget picker. The widget reads `variantData?.<key>`. Store per-instance
+  appearance in `pluginData` under flat `"<instanceKey>_<setting>"` keys (written
+  by the settings UI via `saveValue`, read by the widget). Reference:
+  `PLUGINS/ExampleWithVariants/`. (Settings edits still need a full shell restart.)
+- **Why:** Variants are the only multi-instance path; seeding in settings removes
+  the manual step.
+
 ### Enabling a plugin ≠ placing it on the bar
 
 - **Symptom:** Plugin shows "loaded" in the Plugins tab, but the bar is unchanged.
@@ -137,5 +199,9 @@ Each gotcha below is **symptom → cause → fix → why**.
   `/usr/share/quickshell/dms/quickshell/`).
 - Framework internals worth reading when stuck: `Modules/Plugins/PluginComponent.qml`,
   `Modules/Plugins/BasePill.qml`, `Modules/Plugins/{StringSetting,SelectionSetting}.qml`,
-  `Modules/Settings/PluginListItem.qml`, `Services/PluginService.qml`.
+  `Modules/Settings/PluginListItem.qml`, `Services/PluginService.qml`,
+  `Services/DgopService.qml` (system metrics + in-place history),
+  `Services/PopoutService.qml` (`toggleProcessListModal`),
+  `PLUGINS/ExampleWithVariants/` (variant API), `Modules/ProcessList/PerformanceView.qml`
+  (Canvas chart + own sampled history).
 - Plugin registry: https://plugins.danklinux.com/
