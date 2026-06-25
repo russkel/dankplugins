@@ -1,0 +1,12 @@
+[
+    {
+        "id": 1,
+        "name": "Default",
+        "states": [
+            { "id": 500000001, "type": "backlog", "name": "Backlog" },
+            { "id": 500000002, "type": "unstarted", "name": "To Do" },
+            { "id": 500000003, "type": "started", "name": "In Progress" },
+            { "id": 500000004, "type": "done", "name": "Done" }
+        ]
+    }
+]

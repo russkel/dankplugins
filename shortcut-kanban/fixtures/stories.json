@@ -1,0 +1,22 @@
+{
+    "data": [
+        {
+            "id": 1,
+            "name": "Example in-progress story",
+            "workflow_state_id": 500000003,
+            "iteration_id": 101,
+            "owner_ids": ["00000000-0000-0000-0000-000000000001"],
+            "app_url": "https://app.shortcut.com/example/story/1"
+        },
+        {
+            "id": 2,
+            "name": "Example done story",
+            "workflow_state_id": 500000004,
+            "iteration_id": 101,
+            "owner_ids": ["00000000-0000-0000-0000-000000000001"],
+            "app_url": "https://app.shortcut.com/example/story/2"
+        }
+    ],
+    "next": null,
+    "total": 2
+}

@@ -1,0 +1,14 @@
+{
+    "id": "shortcutKanban",
+    "name": "Shortcut Kanban",
+    "description": "Bar pill with a read-only Shortcut kanban popout",
+    "version": "0.1.0",
+    "author": "russ@rw.id.au",
+    "type": "widget",
+    "capabilities": ["dankbar-widget", "shortcut"],
+    "component": "./ShortcutKanbanWidget.qml",
+    "icon": "view_kanban",
+    "settings": "./ShortcutKanbanSettings.qml",
+    "requires": ["curl"],
+    "permissions": ["settings_read", "settings_write"]
+}
