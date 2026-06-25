@@ -1,0 +1,13 @@
+{
+    "id": "systemSparklines",
+    "name": "System Sparklines",
+    "description": "Per-metric system charts (CPU, RAM, temp, network, disk) — line or colormap bars",
+    "version": "0.1.0",
+    "author": "russ@rw.id.au",
+    "type": "widget",
+    "capabilities": ["dankbar-widget", "system-monitor", "variants"],
+    "component": "./SystemSparklineWidget.qml",
+    "icon": "monitoring",
+    "settings": "./SystemSparklineSettings.qml",
+    "permissions": ["settings_read", "settings_write"]
+}
